@@ -19,7 +19,7 @@ namespace DataAccess
         {
             var connection = new SqlConnection(ConnectionString);
             connection.Open();
-            IDbTransaction transaction = connection.BeginTransaction();
+            SqlTransaction transaction = connection.BeginTransaction();
 
             var profileTime = new List<double>();
             var repository = new TestRepository(transaction);
@@ -28,7 +28,7 @@ namespace DataAccess
             for (int index = 0; index < 1000; index++)
             {
                 watch.Start();
-                await repository.AddData(index, $"Foo Bar: {index}");
+                await repository.AddDataWithADO(index, "Foo Bar");
                 watch.Stop();
                 profileTime.Add(watch.Elapsed.TotalMilliseconds);
                 this.progressUpdates($"Execution time: {watch.Elapsed.TotalMilliseconds}");

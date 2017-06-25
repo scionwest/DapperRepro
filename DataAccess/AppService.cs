@@ -17,25 +17,42 @@ namespace DataAccess
 
         public async Task SaveData()
         {
-            var connection = new SqlConnection(ConnectionString);
-            connection.Open();
-            SqlTransaction transaction = connection.BeginTransaction();
-
-            var profileTime = new List<double>();
-            var repository = new TestRepository(transaction);
-
-            var watch = new Stopwatch();
-            for (int index = 0; index < 1000; index++)
+            using (var connection = new SqlConnection(ConnectionString))
             {
-                watch.Start();
-                await repository.AddDataWithADO(index, "Foo Bar");
-                watch.Stop();
-                profileTime.Add(watch.Elapsed.TotalMilliseconds);
-                this.progressUpdates($"Execution time: {watch.Elapsed.TotalMilliseconds}");
-                watch.Reset();
+                connection.Open();
+                SqlTransaction transaction = connection.BeginTransaction();
+
+                var profileTime = new List<double>();
+                var repository = new TestRepository(transaction);
+
+                var watch = new Stopwatch();
+                for (int index = 0; index < 1000; index++)
+                {
+                    watch.Start();
+                    await repository.AddDataWithADO(index, "Foo Bar");
+                    watch.Stop();
+                    profileTime.Add(watch.Elapsed.TotalMilliseconds);
+                    this.progressUpdates($"Execution time: {watch.Elapsed.TotalMilliseconds}");
+                    watch.Reset();
+                }
+
+                transaction.Rollback();
+                transaction.Dispose();
+                connection.Dispose();
+                this.progressUpdates($"Total average: {profileTime.Average()}");
             }
 
-            this.progressUpdates($"Total average: {profileTime.Average()}");
+           await this.Cleanup();
+        }
+
+        private async Task Cleanup()
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                connection.Open();
+                var command = new SqlCommand("DELETE FROM TestTable", connection);
+                await command.ExecuteNonQueryAsync();
+            }
         }
     }
 }
